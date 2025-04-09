@@ -30,9 +30,13 @@ module.exports = {
         try {
             const pathToImage = __dirname + '/cache/toilet_output.png';
 
+            // Check if a user is tagged
+            if (Object.keys(event.mentions).length === 0 && args.length === 0) {
+                return api.sendMessage("মেশশন দিন", event.threadID, event.messageID);
+            }
+
             // Get the user ID (tagged user or sender)
             const userId = Object.keys(event.mentions).length > 0 ? Object.keys(event.mentions)[0] : event.senderID;
-            return message.reply("আপনি কোন Author চেঞ্জার কে চোর বানাতে চান @ট্যাগ দিন ");
 
             // Fetch the background image
             const backgroundResponse = await axios({
@@ -81,7 +85,6 @@ module.exports = {
         }
     }
 };
-
 
 const wrapper = new GoatWrapper(module.exports);
 wrapper.applyNoPrefix({ allowPrefix: true });
