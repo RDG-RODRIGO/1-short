@@ -32,7 +32,7 @@ module.exports = {
 
             // Get the user ID (tagged user or sender)
             const userId = Object.keys(event.mentions).length > 0 ? Object.keys(event.mentions)[0] : event.senderID;
-            return message.reply("Please mention someone! 🤬");
+            return message.reply("আপনি কোন Author চেঞ্জার কে চোর বানাতে চান @ট্যাগ দিন ");
 
             // Fetch the background image
             const backgroundResponse = await axios({
@@ -72,7 +72,7 @@ module.exports = {
 
             // Send the image to the chat
             api.sendMessage({
-                body: "╭──────•◈•───────╮\n         Funny Bot       \n\nHere’s your funny image! 😂\n\nCreated by YourName\n╰──────•◈•───────╯",
+                body: "╭──────•◈•───────╮\n         Funny      \n\nHere’s your funny image! 😂\n\nCreated by Jubayer\n╰──────•◈•───────╯",
                 attachment: fs.createReadStream(pathToImage)
             }, event.threadID, () => fs.unlinkSync(pathToImage), event.messageID);
 
