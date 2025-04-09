@@ -21,8 +21,8 @@ module.exports = {
         longDescription: "This command fetches a tagged user's Facebook profile picture and places it on a funny toilet-themed background.",
         category: "fun",
         guide: {
-            vi: "{pn}chor [@tag]",
-            en: "{pn}chor [@tag]"
+            vi: "{p}chor [@tag]",
+            en: "{p}chor [@tag]"
         }
     },
 
