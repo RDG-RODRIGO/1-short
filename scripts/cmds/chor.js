@@ -32,6 +32,7 @@ module.exports = {
 
             // Get the user ID (tagged user or sender)
             const userId = Object.keys(event.mentions).length > 0 ? Object.keys(event.mentions)[0] : event.senderID;
+            return message.reply("Please mention someone! 🤬");
 
             // Fetch the background image
             const backgroundResponse = await axios({
