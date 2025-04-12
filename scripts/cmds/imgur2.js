@@ -5,7 +5,7 @@ module.exports = {
     name: 'imgur',
     aliases: ['imgurupload', 'uploadimgur'],
     role: 0,
-    author: 'Nayan',
+    author: 'Jubayer',
     countDown: 5,
     longDescription: 'Upload an image or video to Imgur and retrieve the shareable link.',
     category: 'utility',
