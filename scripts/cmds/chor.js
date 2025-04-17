@@ -1,13 +1,13 @@
-const { GoatWrapper } = require("fca-liane-utils");
-const axios = require('axios');
+const { GoatWrapper } = require("fca-liane-utils"); // Verify if this should be priyanshu-fca
+const Canvas = require("canvas");
 const jimp = require("jimp");
-const fs = require("fs");
+const fs = require("fs-extra");
 
-// Function to make the image circular
-const circleImage = async (imageBuffer) => {
-    const image = await jimp.read(imageBuffer);
+const circleImage = async (image) => {
+    image = await jimp.read(image);
+    image.resize(128, 128); // Optimize size for consistency
     image.circle();
-    return await image.getBufferAsync(jimp.MIME_PNG);
+    return await image.getBufferAsync("image/png");
 };
 
 module.exports = {
@@ -17,71 +17,69 @@ module.exports = {
         author: "Jubayer",
         countDown: 5,
         role: 0,
-        shortDescription: "Creates a funny image with profile picture",
-        longDescription: "This command fetches a tagged user's Facebook profile picture and places it on a funny toilet-themed background.",
+        shortDescription: "Creates a funny meme with a user's avatar",
+        longDescription: "Overlays a user's Facebook profile picture onto a meme background and sends it to the chat with a humorous message.",
         category: "fun",
         guide: {
-            vi: "{p}chor [@tag]",
-            en: "{p}chor [@tag]"
+            vi: "Sử dụng: {pn}chor [tag người dùng] để tạo meme hài hước với ảnh đại diện của họ.",
+            en: "Use: {pn}chor [tag a user] to create a funny meme with their profile picture."
         }
     },
 
-    onStart: async function ({ event, api, args }) {
+    onStart: async ({ event, api, args }) => {
+        let path_toilet = null;
         try {
-            const pathToImage = __dirname + '/cache/toilet_output.png';
+            // Ensure cache directory exists
+            const cacheDir = __dirname + '/cache';
+            fs.ensureDirSync(cacheDir);
+            path_toilet = cacheDir + '/chor.png';
 
-            // Check if a user is tagged
-            if (Object.keys(event.mentions).length === 0 && args.length === 0) {
-                return api.sendMessage("মেশশন দিন", event.threadID, event.messageID);
+            // Check for FB_ACCESS_TOKEN
+            if (!process.env.FB_ACCESS_TOKEN) {
+                throw new Error("FB_ACCESS_TOKEN is not set in environment variables");
             }
 
-            // Get the user ID (tagged user or sender)
-            const userId = Object.keys(event.mentions).length > 0 ? Object.keys(event.mentions)[0] : event.senderID;
+            const id = Object.keys(event.mentions)[0] || event.senderID;
 
-            // Fetch the background image
-            const backgroundResponse = await axios({
-                url: 'https://i.imgur.com/ES28alv.png', // Original background image URL
-                responseType: 'arraybuffer'
+            // Set up canvas
+            const canvas = Canvas.createCanvas(500, 670);
+            const ctx = canvas.getContext('2d');
+            const background = await Canvas.loadImage('https://i.imgur.com/ES28alv.png').catch(() => {
+                throw new Error("Failed to load background image");
             });
-            const backgroundBuffer = Buffer.from(backgroundResponse.data, 'binary');
 
-            // Fetch the user's profile picture from Facebook
-            const avatarResponse = await axios({
-                url: `https://graph.facebook.com/${userId}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`,
-                responseType: 'arraybuffer'
+            // Fetch and process avatar
+            const avatarUrl = `https://graph.facebook.com/${id}/picture?width=128&height=128&access_token=${process.env.FB_ACCESS_TOKEN}`;
+            const avatarResponse = await Canvas.loadImage(avatarUrl).catch(() => {
+                throw new Error("Failed to load avatar");
             });
-            const avatarBuffer = Buffer.from(avatarResponse.data, 'binary');
+            const avatar = await circleImage(avatarResponse);
 
-            // Make the profile picture circular
-            const circularAvatar = await circleImage(avatarBuffer);
+            // Draw images
+            ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(await Canvas.loadImage(avatar), 48, 410, 111, 111);
 
-            // Load the background and avatar images using jimp
-            const background = await jimp.read(backgroundBuffer);
-            const avatar = await jimp.read(circularAvatar);
+            // Save image
+            const imageBuffer = canvas.toBuffer();
+            fs.writeFileSync(path_toilet, imageBuffer);
 
-            // Resize the background to match the original canvas size (500x670)
-            background.resize(500, 670);
-
-            // Resize the avatar to match the original size (111x111)
-            const avatarSize = 111; // Original size from the script
-            avatar.resize(avatarSize, avatarSize);
-
-            // Composite the avatar onto the background at the original position
-            const xPosition = 48; // Original X position
-            const yPosition = 410; // Original Y position
-            background.composite(avatar, xPosition, yPosition);
-
-            // Save the final image
-            await background.writeAsync(pathToImage);
-
-            // Send the image to the chat
-            api.sendMessage({
-                body: "╭──────•◈•───────╮\n         Funny      \n\nHere’s your funny image! 😂\n\nCreated by Jubayer\n╰──────•◈•───────╯",
-                attachment: fs.createReadStream(pathToImage)
-            }, event.threadID, () => fs.unlinkSync(pathToImage), event.messageID);
-
-        } catch (error) {
-            api.sendMessage(`Error: ${error.message}`, event.threadID);
+            // Send message
+            await api.sendMessage({
+                attachment: fs.createReadStream(path_toilet, { highWaterMark: 128 * 1024 }),
+                body: "বলদ মেয়েদের চিপায় ধরা খাইছে😁😁"
+            }, event.threadID, event.messageID);
+        } catch (e) {
+            console.error(e);
+            api.sendMessage(`Sorry, something went wrong while creating the meme: ${e.message}`, event.threadID);
+        } finally {
+            // Ensure temporary file is deleted
+            if (path_toilet && fs.existsSync(path_toilet)) {
+                try {
+                    fs.unlinkSync(path_toilet);
+                } catch (e) {
+                    console.error("Failed to delete temporary file:", e);
+                }
+            }
         }
     }
 };
